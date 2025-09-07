@@ -386,12 +386,14 @@ def init_git_repo(project_path: Path, quiet: bool = False) -> bool:
         os.chdir(original_cwd)
 
 
-def download_template_from_github(ai_assistant: str, download_dir: Path, *, verbose: bool = True, show_progress: bool = True):
+def download_template_from_github(ai_assistant: str, download_dir: Path, repo_slug: str = "github/spec-kit", *, verbose: bool = True, show_progress: bool = True):
     """Download the latest template release from GitHub using HTTP requests.
     Returns (zip_path, metadata_dict)
     """
-    repo_owner = "github"
-    repo_name = "spec-kit"
+    try:
+        repo_owner, repo_name = repo_slug.split("/", 1)
+    except ValueError:
+        raise RuntimeError(f"Invalid repo slug: {repo_slug}. Expected 'owner/name'")
     
     if verbose:
         console.print("[cyan]Fetching latest release information...[/cyan]")
@@ -404,7 +406,7 @@ def download_template_from_github(ai_assistant: str, download_dir: Path, *, verb
     except httpx.RequestError as e:
         if verbose:
             console.print(f"[red]Error fetching release information:[/red] {e}")
-        raise typer.Exit(1)
+        raise RuntimeError(f"GitHub API request failed for {repo_owner}/{repo_name}: {e}")
     
     # Find the template asset for the specified AI assistant
     pattern = f"spec-kit-template-{ai_assistant}"
@@ -419,7 +421,7 @@ def download_template_from_github(ai_assistant: str, download_dir: Path, *, verb
             console.print(f"[yellow]Available assets:[/yellow]")
             for asset in release_data.get("assets", []):
                 console.print(f"  - {asset['name']}")
-        raise typer.Exit(1)
+        raise RuntimeError(f"No template asset found for '{ai_assistant}' in release of {repo_owner}/{repo_name}")
     
     # Use the first matching asset
     asset = matching_assets[0]
@@ -472,7 +474,7 @@ def download_template_from_github(ai_assistant: str, download_dir: Path, *, verb
             console.print(f"[red]Error downloading template:[/red] {e}")
         if zip_path.exists():
             zip_path.unlink()
-        raise typer.Exit(1)
+        raise RuntimeError(f"Download error from {download_url}: {e}")
     if verbose:
         console.print(f"Downloaded: {filename}")
     metadata = {
@@ -484,7 +486,7 @@ def download_template_from_github(ai_assistant: str, download_dir: Path, *, verb
     return zip_path, metadata
 
 
-def download_and_extract_template(project_path: Path, ai_assistant: str, is_current_dir: bool = False, *, verbose: bool = True, tracker: StepTracker | None = None) -> Path:
+def download_and_extract_template(project_path: Path, ai_assistant: str, is_current_dir: bool = False, repo_slug: str = "github/spec-kit", *, verbose: bool = True, tracker: StepTracker | None = None) -> Path:
     """Download the latest release and extract it to create a new project.
     Returns project_path. Uses tracker if provided (with keys: fetch, download, extract, cleanup)
     """
@@ -497,6 +499,7 @@ def download_and_extract_template(project_path: Path, ai_assistant: str, is_curr
         zip_path, meta = download_template_from_github(
             ai_assistant,
             current_dir,
+            repo_slug,
             verbose=verbose and tracker is None,
             show_progress=(tracker is None)
         )
@@ -643,6 +646,7 @@ def init(
     ignore_agent_tools: bool = typer.Option(False, "--ignore-agent-tools", help="Skip checks for AI agent tools like Claude Code"),
     no_git: bool = typer.Option(False, "--no-git", help="Skip git repository initialization"),
     here: bool = typer.Option(False, "--here", help="Initialize project in the current directory instead of creating a new one"),
+    template_repo: Optional[str] = typer.Option(None, "--template-repo", help="GitHub repo to fetch templates from (owner/name), default github/spec-kit or SPEC_KIT_TEMPLATE_REPO env"),
 ):
     """
     Initialize a new Specify project from the latest template.
@@ -751,6 +755,7 @@ def init(
             raise typer.Exit(1)
     
     # Download and set up project
+    repo_slug = template_repo or os.environ.get("SPEC_KIT_TEMPLATE_REPO", "github/spec-kit")
     # New tree-based progress (no emojis); include earlier substeps
     tracker = StepTracker("Initialize Specify Project")
     # Flag to allow suppressing legacy headings
@@ -776,7 +781,7 @@ def init(
     with Live(tracker.render(), console=console, refresh_per_second=8, transient=True) as live:
         tracker.attach_refresh(lambda: live.update(tracker.render()))
         try:
-            download_and_extract_template(project_path, selected_ai, here, verbose=False, tracker=tracker)
+            download_and_extract_template(project_path, selected_ai, here, repo_slug, verbose=False, tracker=tracker)
 
             # Git step
             if not no_git:
