@@ -386,7 +386,7 @@ def init_git_repo(project_path: Path, quiet: bool = False) -> bool:
         os.chdir(original_cwd)
 
 
-def download_template_from_github(ai_assistant: str, download_dir: Path, repo_slug: str = "github/spec-kit", *, verbose: bool = True, show_progress: bool = True):
+def download_template_from_github(ai_assistant: str, download_dir: Path, repo_slug: str = "github/spec-kit", template_tag: Optional[str] = None, *, verbose: bool = True, show_progress: bool = True):
     """Download the latest template release from GitHub using HTTP requests.
     Returns (zip_path, metadata_dict)
     """
@@ -396,13 +396,36 @@ def download_template_from_github(ai_assistant: str, download_dir: Path, repo_sl
         raise RuntimeError(f"Invalid repo slug: {repo_slug}. Expected 'owner/name'")
     
     if verbose:
-        console.print("[cyan]Fetching latest release information...[/cyan]")
-    api_url = f"https://api.github.com/repos/{repo_owner}/{repo_name}/releases/latest"
+        console.print(f"[cyan]Fetching release information from {repo_owner}/{repo_name} ({'tag ' + template_tag if template_tag else 'latest'})...[/cyan]")
+    api_url = f"https://api.github.com/repos/{repo_owner}/{repo_name}/releases/{'tags/' + template_tag if template_tag else 'latest'}"
+    token = os.environ.get("GITHUB_TOKEN")
+    headers = {
+        "User-Agent": "specify-cli/0.0.2 (+https://github.com/github/spec-kit)",
+        "Accept": "application/vnd.github+json",
+    }
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+        headers["X-GitHub-Api-Version"] = "2022-11-28"
     
     try:
-        response = httpx.get(api_url, timeout=30, follow_redirects=True)
+        response = httpx.get(api_url, timeout=30, follow_redirects=True, headers=headers)
         response.raise_for_status()
         release_data = response.json()
+    except httpx.HTTPStatusError as e:
+        status = e.response.status_code if hasattr(e, "response") else None
+        msg = ""
+        try:
+            msg = e.response.json().get("message", "")
+        except Exception:
+            msg = e.response.text if hasattr(e, "response") else ""
+        if verbose:
+            console.print(f"[red]GitHub API returned {status}[/red] {msg}")
+            if status == 403:
+                console.print("[yellow]Tip:[/yellow] Set GITHUB_TOKEN to avoid rate limits")
+            console.print(f"[yellow]Repo:[/yellow] {repo_owner}/{repo_name}")
+            if template_tag:
+                console.print(f"[yellow]Tag:[/yellow] {template_tag}")
+        raise RuntimeError(f"GitHub API status {status} for {repo_owner}/{repo_name}: {msg}")
     except httpx.RequestError as e:
         if verbose:
             console.print(f"[red]Error fetching release information:[/red] {e}")
@@ -440,7 +463,7 @@ def download_template_from_github(ai_assistant: str, download_dir: Path, repo_sl
         console.print(f"[cyan]Downloading template...[/cyan]")
     
     try:
-        with httpx.stream("GET", download_url, timeout=30, follow_redirects=True) as response:
+        with httpx.stream("GET", download_url, timeout=30, follow_redirects=True, headers=headers) as response:
             response.raise_for_status()
             total_size = int(response.headers.get('content-length', 0))
             
@@ -486,7 +509,7 @@ def download_template_from_github(ai_assistant: str, download_dir: Path, repo_sl
     return zip_path, metadata
 
 
-def download_and_extract_template(project_path: Path, ai_assistant: str, is_current_dir: bool = False, repo_slug: str = "github/spec-kit", *, verbose: bool = True, tracker: StepTracker | None = None) -> Path:
+def download_and_extract_template(project_path: Path, ai_assistant: str, is_current_dir: bool = False, repo_slug: str = "github/spec-kit", template_tag: Optional[str] = None, *, verbose: bool = True, tracker: StepTracker | None = None) -> Path:
     """Download the latest release and extract it to create a new project.
     Returns project_path. Uses tracker if provided (with keys: fetch, download, extract, cleanup)
     """
@@ -494,12 +517,13 @@ def download_and_extract_template(project_path: Path, ai_assistant: str, is_curr
     
     # Step: fetch + download combined
     if tracker:
-        tracker.start("fetch", "contacting GitHub API")
+        tracker.start("fetch", f"{repo_slug} ({'tag ' + template_tag if template_tag else 'latest'})")
     try:
         zip_path, meta = download_template_from_github(
             ai_assistant,
             current_dir,
             repo_slug,
+            template_tag,
             verbose=verbose and tracker is None,
             show_progress=(tracker is None)
         )
@@ -647,6 +671,7 @@ def init(
     no_git: bool = typer.Option(False, "--no-git", help="Skip git repository initialization"),
     here: bool = typer.Option(False, "--here", help="Initialize project in the current directory instead of creating a new one"),
     template_repo: Optional[str] = typer.Option(None, "--template-repo", help="GitHub repo to fetch templates from (owner/name), default github/spec-kit or SPEC_KIT_TEMPLATE_REPO env"),
+    template_tag: Optional[str] = typer.Option(None, "--template-tag", help="GitHub release tag to fetch templates from (default: latest) or SPEC_KIT_TEMPLATE_TAG env"),
 ):
     """
     Initialize a new Specify project from the latest template.
@@ -756,6 +781,7 @@ def init(
     
     # Download and set up project
     repo_slug = template_repo or os.environ.get("SPEC_KIT_TEMPLATE_REPO", "github/spec-kit")
+    tag = template_tag or os.environ.get("SPEC_KIT_TEMPLATE_TAG")
     # New tree-based progress (no emojis); include earlier substeps
     tracker = StepTracker("Initialize Specify Project")
     # Flag to allow suppressing legacy headings
@@ -781,7 +807,7 @@ def init(
     with Live(tracker.render(), console=console, refresh_per_second=8, transient=True) as live:
         tracker.attach_refresh(lambda: live.update(tracker.render()))
         try:
-            download_and_extract_template(project_path, selected_ai, here, repo_slug, verbose=False, tracker=tracker)
+            download_and_extract_template(project_path, selected_ai, here, repo_slug, tag, verbose=False, tracker=tracker)
 
             # Git step
             if not no_git:

@@ -36,6 +36,12 @@ Initialize your project depending on the coding agent you're using:
 
 ```bash
 uvx --from git+https://github.com/github/spec-kit.git specify init <PROJECT_NAME>
+# Use a fork or custom repo (fetch templates from your repo):
+uvx --from git+https://github.com/RobinVivant/spec-kit.git specify init --here --ai opencode --ignore-agent-tools --template-repo RobinVivant/spec-kit
+# Pin to a specific release tag instead of 'latest':
+SPEC_KIT_TEMPLATE_TAG=v0.0.1 uvx --from git+https://github.com/RobinVivant/spec-kit.git specify init --here --ai opencode --ignore-agent-tools --template-repo RobinVivant/spec-kit
+# Avoid GitHub API rate limits (optional):
+GITHUB_TOKEN=your_token uvx --from git+https://github.com/github/spec-kit.git specify init <PROJECT_NAME>
 ```
 
 ### 2. Create the spec
