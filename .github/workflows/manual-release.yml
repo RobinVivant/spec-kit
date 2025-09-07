@@ -68,6 +68,46 @@ jobs:
         # Copy common folders to base
         echo "Packaging SDD common components..."
         
+        # Helper to generate agent command files from templates
+        generate_commands() {
+          local agent=$1
+          local ext=$2
+          local arg_format=$3
+          local output_dir=$4
+          
+          mkdir -p "$output_dir"
+          
+          for template in templates/commands/*.md; do
+            if [[ -f "$template" ]]; then
+              name=$(basename "$template" .md)
+              description=$(awk '/^description:/ {gsub(/^description: *"?/, ""); gsub(/"$/, ""); print; exit}' "$template" | tr -d '\r')
+              content=$(awk '/^---$/{if(++count==2) start=1; next} start' "$template" | sed "s/{ARGS}/$arg_format/g")
+              
+              case $ext in
+                "toml")
+                  {
+                    echo "description = \"$description\""
+                    echo ""
+                    echo "prompt = \"\"\""
+                    echo "$content"
+                    echo "\"\"\""
+                  } > "$output_dir/$name.$ext"
+                  ;;
+                "md")
+                  echo "$content" > "$output_dir/$name.$ext"
+                  ;;
+                "prompt.md")
+                  {
+                    echo "# $(echo "$description" | sed 's/\. .*//')"
+                    echo ""
+                    echo "$content"
+                  } > "$output_dir/$name.$ext"
+                  ;;
+              esac
+            fi
+          done
+        }
+        
         if [ -d "memory" ]; then
           cp -r memory sdd-package-base/
           echo "✓ Copied memory folder ($(find memory -type f | wc -l) files)"
@@ -126,6 +166,20 @@ jobs:
           echo "⚠️ agent_templates/copilot folder not found"
         fi
         
+        # Create OpenCode package
+        echo "Creating OpenCode package..."
+        mkdir -p sdd-opencode-package
+        cp -r sdd-package-base/* sdd-opencode-package/
+        if [ -d "agent_templates/opencode" ]; then
+          cp -r agent_templates/opencode sdd-opencode-package/.opencode
+          echo "✓ Added OpenCode commands ($(find agent_templates/opencode -type f | wc -l) files)"
+        else
+          echo "⚠️ agent_templates/opencode folder not found"
+        fi
+        mkdir -p sdd-opencode-package/.opencode/commands
+        generate_commands "opencode" "md" "\$ARGUMENTS" "sdd-opencode-package/.opencode/commands"
+        echo "✓ Generated OpenCode commands from templates ($(ls sdd-opencode-package/.opencode/commands | wc -l) files)"
+        
         # Create archive files for each package
         echo "Creating archive files..."
         cd sdd-claude-package && zip -r ../spec-kit-template-claude-${{ steps.version.outputs.new_version }}.zip . && cd ..
@@ -134,12 +188,14 @@ jobs:
         
         cd sdd-copilot-package && zip -r ../spec-kit-template-copilot-${{ steps.version.outputs.new_version }}.zip . && cd ..
         
+        cd sdd-opencode-package && zip -r ../spec-kit-template-opencode-${{ steps.version.outputs.new_version }}.zip . && cd ..
+        
         echo ""
         echo "📦 Packages created:"
         echo "Claude: $(ls -lh spec-kit-template-claude-*.zip | awk '{print $5}')"
         echo "Gemini: $(ls -lh spec-kit-template-gemini-*.zip | awk '{print $5}')"
         echo "Copilot: $(ls -lh spec-kit-template-copilot-*.zip | awk '{print $5}')"
-        echo "Copilot: $(ls -lh sdd-template-copilot-*.zip | awk '{print $5}')"
+        echo "OpenCode: $(ls -lh spec-kit-template-opencode-*.zip | awk '{print $5}')"
         
     - name: Generate detailed release notes
       run: |
@@ -164,12 +220,13 @@ jobs:
         cat > release_notes.md << EOF
         Template release ${{ steps.version.outputs.new_version }}
         
-        Updated specification-driven development templates for GitHub Copilot, Claude Code, and Gemini CLI.
+        Updated specification-driven development templates for GitHub Copilot, Claude Code, Gemini CLI, and OpenCode.
         
         Download the template for your preferred AI assistant:
         - spec-kit-template-copilot-${{ steps.version.outputs.new_version }}.zip
         - spec-kit-template-claude-${{ steps.version.outputs.new_version }}.zip
         - spec-kit-template-gemini-${{ steps.version.outputs.new_version }}.zip  
+        - spec-kit-template-opencode-${{ steps.version.outputs.new_version }}.zip
         
         Changes since $LAST_TAG:
         $COMMITS
@@ -185,6 +242,7 @@ jobs:
           spec-kit-template-copilot-${{ steps.version.outputs.new_version }}.zip \
           spec-kit-template-claude-${{ steps.version.outputs.new_version }}.zip \
           spec-kit-template-gemini-${{ steps.version.outputs.new_version }}.zip \
+          spec-kit-template-opencode-${{ steps.version.outputs.new_version }}.zip \
           --title "Spec Kit Templates - $VERSION_NO_V" \
           --notes-file release_notes.md
       env:
