@@ -89,7 +89,7 @@ jobs:
           for template in templates/commands/*.md; do
             if [[ -f "$template" ]]; then
               name=$(basename "$template" .md)
-              description=$(awk 'BEGIN{in=0;count=0} /^---$/ {count++; if(count==1){in=1; next} else if(count==2){exit}} in && /^description:/ {sub(/^description:[[:space:]]*"?/,""); sub(/"$/,""); gsub(/\r/,""); print; exit}' "$template")
+              description=$(awk 'BEGIN{inside=0;count=0} /^---$/ {count++; if(count==1){inside=1; next} else if(count==2){exit}} inside && /^description:/ {sub(/^description:[[:space:]]*"?/,""); sub(/"$/,""); gsub(/\r/,""); print; exit}' "$template")
               content=$(awk '/^---$/{if(++count==2) start=1; next} start' "$template" | sed "s/{ARGS}/$arg_format/g")
               
               case $ext in
