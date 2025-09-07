@@ -94,7 +94,16 @@ jobs:
                   } > "$output_dir/$name.$ext"
                   ;;
                 "md")
-                  echo "$content" > "$output_dir/$name.$ext"
+                  if [ "$agent" = "opencode" ]; then
+                    {
+                      echo "---"
+                      echo "description: \"$description\""
+                      echo "---"
+                      echo "$content"
+                    } > "$output_dir/$name.$ext"
+                  else
+                    echo "$content" > "$output_dir/$name.$ext"
+                  fi
                   ;;
                 "prompt.md")
                   {
@@ -176,9 +185,9 @@ jobs:
         else
           echo "⚠️ agent_templates/opencode folder not found"
         fi
-        mkdir -p sdd-opencode-package/.opencode/commands
-        generate_commands "opencode" "md" "\$ARGUMENTS" "sdd-opencode-package/.opencode/commands"
-        echo "✓ Generated OpenCode commands from templates ($(ls sdd-opencode-package/.opencode/commands | wc -l) files)"
+        mkdir -p sdd-opencode-package/.opencode/command
+        generate_commands "opencode" "md" "\$ARGUMENTS" "sdd-opencode-package/.opencode/command"
+        echo "✓ Generated OpenCode commands from templates ($(ls sdd-opencode-package/.opencode/command | wc -l) files)"
         
         # Create archive files for each package
         echo "Creating archive files..."

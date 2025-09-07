@@ -864,7 +864,7 @@ def init(
         steps_lines.append(f"{step_num}. Use [bold cyan]/specify[/], [bold cyan]/plan[/], [bold cyan]/tasks[/] commands with OpenCode")
         steps_lines.append("   - Run opencode /specify to create specifications")
         steps_lines.append("   - Run opencode /plan to create implementation plans")
-        steps_lines.append("   - Commands are available in .opencode/commands")
+        steps_lines.append("   - Commands are available in .opencode/command")
 
     step_num += 1
     steps_lines.append(f"{step_num}. Update [bold magenta]memory/constitution.md[/bold magenta] with your project's non-negotiable principles")

@@ -103,7 +103,16 @@ jobs:
                   } > "$output_dir/$name.$ext"
                   ;;
                 "md")
-                  echo "$content" > "$output_dir/$name.$ext"
+                  if [ "$agent" = "opencode" ]; then
+                    {
+                      echo "---"
+                      echo "description: \"$description\""
+                      echo "---"
+                      echo "$content"
+                    } > "$output_dir/$name.$ext"
+                  else
+                    echo "$content" > "$output_dir/$name.$ext"
+                  fi
                   ;;
                 "prompt.md")
                   {
@@ -148,8 +157,8 @@ jobs:
           cp -r agent_templates/opencode sdd-opencode-package/.opencode
           echo "Added OpenCode agent templates"
         fi
-        mkdir -p sdd-opencode-package/.opencode/commands
-        generate_commands "opencode" "md" "\$ARGUMENTS" "sdd-opencode-package/.opencode/commands"
+        mkdir -p sdd-opencode-package/.opencode/command
+        generate_commands "opencode" "md" "\$ARGUMENTS" "sdd-opencode-package/.opencode/command"
         echo "Created OpenCode package"
         
         # Create archive files for each package
