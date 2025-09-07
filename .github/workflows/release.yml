@@ -89,7 +89,7 @@ jobs:
           for template in templates/commands/*.md; do
             if [[ -f "$template" ]]; then
               name=$(basename "$template" .md)
-              description=$(awk '/^description:/ {gsub(/^description: *"?/, ""); gsub(/"$/, ""); print; exit}' "$template" | tr -d '\r')
+              description=$(awk 'BEGIN{in=0;count=0} /^---$/ {count++; if(count==1){in=1; next} else if(count==2){exit}} in && /^description:/ {sub(/^description:[[:space:]]*"?/,""); sub(/"$/,""); gsub(/\r/,""); print; exit}' "$template")
               content=$(awk '/^---$/{if(++count==2) start=1; next} start' "$template" | sed "s/{ARGS}/$arg_format/g")
               
               case $ext in
@@ -156,6 +156,13 @@ jobs:
         if [ -d "agent_templates/opencode" ]; then
           cp -r agent_templates/opencode sdd-opencode-package/.opencode
           echo "Added OpenCode agent templates"
+        fi
+        # Migrate any legacy .opencode/commands to .opencode/command
+        if [ -d "sdd-opencode-package/.opencode/commands" ]; then
+          mkdir -p sdd-opencode-package/.opencode/command
+          mv sdd-opencode-package/.opencode/commands/* sdd-opencode-package/.opencode/command/ 2>/dev/null || true
+          rm -rf sdd-opencode-package/.opencode/commands
+          echo "Migrated OpenCode templates to .opencode/command"
         fi
         mkdir -p sdd-opencode-package/.opencode/command
         generate_commands "opencode" "md" "\$ARGUMENTS" "sdd-opencode-package/.opencode/command"
