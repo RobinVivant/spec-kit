@@ -51,7 +51,8 @@ import readchar
 AI_CHOICES = {
     "copilot": "GitHub Copilot",
     "claude": "Claude Code",
-    "gemini": "Gemini CLI"
+    "gemini": "Gemini CLI",
+    "opencode": "OpenCode"
 }
 
 # ASCII Art Banner
@@ -638,7 +639,7 @@ def download_and_extract_template(project_path: Path, ai_assistant: str, is_curr
 @app.command()
 def init(
     project_name: str = typer.Argument(None, help="Name for your new project directory (optional if using --here)"),
-    ai_assistant: str = typer.Option(None, "--ai", help="AI assistant to use: claude, gemini, or copilot"),
+    ai_assistant: str = typer.Option(None, "--ai", help="AI assistant to use: claude, gemini, copilot, or opencode"),
     ignore_agent_tools: bool = typer.Option(False, "--ignore-agent-tools", help="Skip checks for AI agent tools like Claude Code"),
     no_git: bool = typer.Option(False, "--no-git", help="Skip git repository initialization"),
     here: bool = typer.Option(False, "--here", help="Initialize project in the current directory instead of creating a new one"),
@@ -659,6 +660,7 @@ def init(
         specify init my-project --ai claude
         specify init my-project --ai gemini
         specify init my-project --ai copilot --no-git
+        specify init my-project --ai opencode
         specify init --ignore-agent-tools my-project
         specify init --here --ai claude
         specify init --here
@@ -736,6 +738,10 @@ def init(
         elif selected_ai == "gemini":
             if not check_tool("gemini", "Install from: https://github.com/google-gemini/gemini-cli"):
                 console.print("[red]Error:[/red] Gemini CLI is required for Gemini projects")
+                agent_tool_missing = True
+        elif selected_ai == "opencode":
+            if not check_tool("opencode", "Install from: https://github.com/sst/opencode"):
+                console.print("[red]Error:[/red] OpenCode CLI is required for OpenCode projects")
                 agent_tool_missing = True
         # GitHub Copilot check is not needed as it's typically available in supported IDEs
         
@@ -823,6 +829,11 @@ def init(
         steps_lines.append("   - See GEMINI.md for all available commands")
     elif selected_ai == "copilot":
         steps_lines.append(f"{step_num}. Open in Visual Studio Code and use [bold cyan]/specify[/], [bold cyan]/plan[/], [bold cyan]/tasks[/] commands with GitHub Copilot")
+    elif selected_ai == "opencode":
+        steps_lines.append(f"{step_num}. Use [bold cyan]/specify[/], [bold cyan]/plan[/], [bold cyan]/tasks[/] commands with OpenCode")
+        steps_lines.append("   - Run opencode /specify to create specifications")
+        steps_lines.append("   - Run opencode /plan to create implementation plans")
+        steps_lines.append("   - Commands are available in .opencode/commands")
 
     step_num += 1
     steps_lines.append(f"{step_num}. Update [bold magenta]CONSTITUTION.md[/bold magenta] with your project's non-negotiable principles")
@@ -855,11 +866,12 @@ def check():
     console.print("\n[cyan]Optional AI tools:[/cyan]")
     claude_ok = check_tool("claude", "Install from: https://docs.anthropic.com/en/docs/claude-code/setup")
     gemini_ok = check_tool("gemini", "Install from: https://github.com/google-gemini/gemini-cli")
+    opencode_ok = check_tool("opencode", "Install from: https://github.com/sst/opencode")
     
     console.print("\n[green]✓ Specify CLI is ready to use![/green]")
     if not git_ok:
         console.print("[yellow]Consider installing git for repository management[/yellow]")
-    if not (claude_ok or gemini_ok):
+    if not (claude_ok or gemini_ok or opencode_ok):
         console.print("[yellow]Consider installing an AI assistant for the best experience[/yellow]")
 
 
