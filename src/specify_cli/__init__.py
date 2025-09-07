@@ -792,7 +792,7 @@ def init(
     tracker.add("ai-select", "Select AI assistant")
     tracker.complete("ai-select", f"{selected_ai}")
     for key, label in [
-        ("fetch", "Fetch latest release"),
+        ("fetch", "Fetch release"),
         ("download", "Download template"),
         ("extract", "Extract template"),
         ("zip-list", "Archive contents"),
@@ -867,7 +867,7 @@ def init(
         steps_lines.append("   - Commands are available in .opencode/commands")
 
     step_num += 1
-    steps_lines.append(f"{step_num}. Update [bold magenta]CONSTITUTION.md[/bold magenta] with your project's non-negotiable principles")
+    steps_lines.append(f"{step_num}. Update [bold magenta]memory/constitution.md[/bold magenta] with your project's non-negotiable principles")
 
     steps_panel = Panel("\n".join(steps_lines), title="Next steps", border_style="cyan", padding=(1,2))
     console.print()  # blank line
