@@ -1,6 +1,6 @@
 #!/bin/bash
 # Incrementally update agent context files based on new feature plan
-# Supports: CLAUDE.md, GEMINI.md, .github/copilot-instructions.md, and OPENCODE.md
+# Supports: CLAUDE.md, GEMINI.md, .github/copilot-instructions.md, and AGENTS.md
 # O(1) operation - only reads current context file and new plan.md
 
 set -e
@@ -14,7 +14,7 @@ NEW_PLAN="$FEATURE_DIR/plan.md"
 CLAUDE_FILE="$REPO_ROOT/CLAUDE.md"
 GEMINI_FILE="$REPO_ROOT/GEMINI.md"
 COPILOT_FILE="$REPO_ROOT/.github/copilot-instructions.md"
-OPENCODE_FILE="$REPO_ROOT/OPENCODE.md"
+AGENTS_FILE="$REPO_ROOT/AGENTS.md"
 
 # Allow override via argument
 AGENT_TYPE="$1"
@@ -199,14 +199,14 @@ case "$AGENT_TYPE" in
         update_agent_file "$COPILOT_FILE" "GitHub Copilot"
         ;;
     "opencode")
-        update_agent_file "$OPENCODE_FILE" "OpenCode"
+        update_agent_file "$AGENTS_FILE" "OpenCode"
         ;;
     "")
         # Update all existing files
         [ -f "$CLAUDE_FILE" ] && update_agent_file "$CLAUDE_FILE" "Claude Code"
         [ -f "$GEMINI_FILE" ] && update_agent_file "$GEMINI_FILE" "Gemini CLI"
         [ -f "$COPILOT_FILE" ] && update_agent_file "$COPILOT_FILE" "GitHub Copilot"
-        [ -f "$OPENCODE_FILE" ] && update_agent_file "$OPENCODE_FILE" "OpenCode"
+        [ -f "$AGENTS_FILE" ] && update_agent_file "$AGENTS_FILE" "OpenCode"
         
         # If no files exist, create based on current directory or ask user
         if [ ! -f "$CLAUDE_FILE" ] && [ ! -f "$GEMINI_FILE" ] && [ ! -f "$COPILOT_FILE" ]; then
@@ -237,4 +237,4 @@ echo "  - No argument: Update all existing agent context files"
 echo "  - claude: Update only CLAUDE.md"
 echo "  - gemini: Update only GEMINI.md" 
 echo "  - copilot: Update only .github/copilot-instructions.md"
-echo "  - opencode: Update only OPENCODE.md"
+echo "  - opencode: Update only AGENTS.md"

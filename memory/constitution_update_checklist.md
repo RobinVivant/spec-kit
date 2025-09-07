@@ -13,7 +13,7 @@ When amending the constitution (`/memory/constitution.md`), ensure all dependent
 - [ ] `/CLAUDE.md` - Update runtime development guidelines
 - [ ] `/.opencode/command/plan.md` - Update if planning process changes
 - [ ] `/.opencode/command/tasks.md` - Update if task generation affected
-- [ ] `/OPENCODE.md` - Update runtime development guidelines
+- [ ] `/AGENTS.md` - Update runtime development guidelines
 
 ### Article-specific updates:
 

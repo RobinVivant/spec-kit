@@ -166,6 +166,14 @@ jobs:
         fi
         mkdir -p sdd-opencode-package/.opencode/command
         generate_commands "opencode" "md" "\$ARGUMENTS" "sdd-opencode-package/.opencode/command"
+        # Sanitize Constitution checklist for OpenCode package
+        if [ -f "sdd-opencode-package/memory/constitution_update_checklist.md" ]; then
+          sed -i '/\/\.claude\/commands\/plan\.md/d' sdd-opencode-package/memory/constitution_update_checklist.md
+          sed -i '/\/\.claude\/commands\/tasks\.md/d' sdd-opencode-package/memory/constitution_update_checklist.md
+          sed -i '/\/CLAUDE\.md/d' sdd-opencode-package/memory/constitution_update_checklist.md
+          sed -i 's|/OPENCODE\.md|/AGENTS.md|g' sdd-opencode-package/memory/constitution_update_checklist.md
+          echo "Sanitized Constitution Update Checklist for OpenCode"
+        fi
         echo "Created OpenCode package"
         
         # Create archive files for each package
